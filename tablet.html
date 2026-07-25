@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chief Guest View | SLMA Basketball Tournament 2026</title>
+<style>
+  :root{--navy-1:#071539;--navy-2:#0b2447;--accent:#f59e0b;--muted:#9aa6b2;--card:#ffffffee;--glass:rgba(6,32,46,0.45);} 
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;
+       background-image:linear-gradient(180deg,rgba(3,16,40,0.45),rgba(3,16,40,0.55)), url("images/background.jpg");
+       background-size:cover;background-position:center center;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px;color:var(--card);}
+  .screen{width:min(720px,96%);background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03));backdrop-filter:blur(6px);
+          border-radius:20px;box-shadow:0 30px 80px rgba(2,18,36,.45);overflow:hidden;padding:26px;text-align:center;color:#fff;border:1px solid rgba(255,255,255,0.06);}
+  h1{margin:0 0 6px;font-size:1.25rem;color:#fff;letter-spacing:0.02em}
+  .sub{margin:0 0 12px;color:var(--muted);font-size:.95rem;opacity:.95}
+  .status{display:inline-flex;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,0.06);color:var(--accent);font-weight:700;font-size:.9rem;margin-bottom:18px;border:1px solid rgba(255,255,255,0.04)}
+  .ceremonyBtn{width:100%;border:none;cursor:pointer;padding:18px;border-radius:14px;
+               background:linear-gradient(90deg,var(--accent),#d97706);color:#071539;font-size:1.1rem;font-weight:800;
+               box-shadow:0 8px 28px rgba(11,37,83,0.35);margin-bottom:18px;letter-spacing:.02em}
+  .ceremonyBtn:disabled{opacity:.5;cursor:not-allowed;}
+  .stage{position:relative;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.06));min-height:220px;
+         display:flex;align-items:center;justify-content:center;padding:18px}
+  .display{color:#fff;font-size:clamp(2.4rem,9vw,4rem);font-weight:900;letter-spacing:.02em;text-shadow:0 6px 18px rgba(2,8,20,0.6)}
+  video{width:100%;display:none;border-radius:8px}
+  .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-weight:900;color:#fff;background:var(--glass);backdrop-filter:blur(2px);}
+  .overlay.fullscreen{position:fixed;inset:0;z-index:9999}
+  .overlay.show{display:flex;animation:fadeIn .36s ease both}
+  .overlay .big{font-size:clamp(4rem,14vw,8rem);line-height:0.9;transform:translateY(6px);text-shadow:0 14px 40px rgba(2,8,20,0.7);}
+  .overlay .msg{font-size:clamp(1rem,3.2vw,1.8rem);margin-top:8px;opacity:.95}
+  @keyframes pop {
+    0%{transform:scale(.6);opacity:0}
+    60%{transform:scale(1.05);opacity:1}
+    100%{transform:scale(1);opacity:1}
+  }
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .pop{animation:pop .42s cubic-bezier(.16,.9,.36,1)}
+  .note{margin-top:16px;font-size:.9rem;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="screen">
+  <h1>Sri Lanka Military Academy</h1>
+  <div class="sub">Basketball Tournament 2026 &middot; </div>
+  <div class="status" id="statusBadge">Ready</div>
+
+  <button class="ceremonyBtn" id="ceremonyBtn" onclick="startCeremony()">Start Match</button>
+
+  <div class="stage">
+    <div class="display" id="display">10:00</div>
+    <video id="video" playsinline muted>
+      <source src="/countdown.mp4" type="video/mp4">
+    </video>
+    <div class="overlay" id="overlay">
+      <div>
+        <div class="big" id="overlayBig">5</div>
+        <div class="msg" id="overlayMsg">Starting in</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">Tap once to begin. The video plays here while the scoreboard shows its own live 5-4-3-2-1 countdown for the crowd.</p>
+</div>
+
+<script>
+const display = document.getElementById('display');
+const statusBadge = document.getElementById('statusBadge');
+const ceremonyBtn = document.getElementById('ceremonyBtn');
+const video = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const overlayBig = document.getElementById('overlayBig');
+const overlayMsg = document.getElementById('overlayMsg');
+let ceremonyTapped = false;
+let localTimerRunning = false;
+let localTimerHandle = null;
+
+function formatTime(s){
+  const mm = Math.floor(s/60), ss = s%60;
+  return mm + ':' + String(ss).padStart(2,'0');
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function startCeremony(){
+  if (ceremonyTapped) return;
+  ceremonyTapped = true;
+  ceremonyBtn.disabled = true;
+  statusBadge.textContent = 'Preparing...';
+
+  // Show the video full-screen and play it
+  display.style.display = 'none';
+  video.style.display = 'block';
+  video.currentTime = 0;
+
+  // Try to make the video element fullscreen for a dramatic effect
+  try {
+    if (video.requestFullscreen) await video.requestFullscreen();
+    else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+  } catch (e) {
+    // ignore fullscreen failures
+  }
+
+  try {
+    await video.play();
+  } catch (e) {
+    // Autoplay blocked or missing file: fall back to immediate start
+    video.style.display = 'none';
+    display.style.display = 'block';
+    startMatchTimerAfterVideo();
+    return;
+  }
+
+  // When video finishes, show LET THE GAME BEGIN, then start the 10:00 timer
+  video.onended = async () => {
+    // Immediately exit fullscreen, hide the video and start the timer
+    try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) {}
+    try { video.pause(); } catch (e) {}
+    video.style.display = 'none';
+    // Start the match timer (10:00) locally and notify backend
+    startMatchTimerAfterVideo();
+  };
+}
+
+function startMatchTimerAfterVideo(){
+  // set initial 10:00 on display
+  const initialSeconds = 10 * 60;
+  display.textContent = formatTime(initialSeconds);
+  display.style.display = 'block';
+
+  // Notify backend/ESP32 to start its timers
+  fetch('/ceremonyStart').catch(()=>{});
+  statusBadge.textContent = 'Match started!';
+
+  // Start local timer and prevent poll from overwriting display
+  startLocalTimer(initialSeconds);
+}
+
+function startLocalTimer(startSeconds){
+  if (localTimerHandle) clearInterval(localTimerHandle);
+  localTimerRunning = true;
+  let s = startSeconds;
+  localTimerHandle = setInterval(() => {
+    s--;
+    if (s < 0) {
+      clearInterval(localTimerHandle);
+      localTimerRunning = false;
+      statusBadge.textContent = 'Finished';
+      display.textContent = '00:00';
+      return;
+    }
+    display.textContent = formatTime(s);
+  }, 1000);
+}
+
+function poll(){
+  fetch('/status').then(r => r.json()).then(data => {
+    if (data.mode === 'countdown') {
+      statusBadge.textContent = 'Starting in...';
+      if (video.style.display !== 'block' && !localTimerRunning) display.textContent = data.countdown;
+    } else if (data.mode === 'go') {
+      statusBadge.textContent = 'Match started!';
+      if (video.style.display !== 'block' && !localTimerRunning) display.textContent = 'GO';
+    } else if (data.mode === 'running') {
+      statusBadge.textContent = 'Running';
+      if (video.style.display !== 'block' && !localTimerRunning) display.textContent = formatTime(data.timerSeconds);
+    } else {
+      statusBadge.textContent = 'Ready';
+      if (video.style.display !== 'block' && !localTimerRunning) display.textContent = formatTime(data.timerSeconds);
+    }
+  }).catch(() => { statusBadge.textContent = 'Connection lost'; });
+}
+setInterval(poll, 500);
+poll();
+</script>
+</body>
+</html>
